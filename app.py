@@ -165,6 +165,10 @@ def rsvp_add():
 @app.route('/event/<eid>')
 def event(eid):
   info = next(g.conn.execute('select * from events where eid = \'' + eid + '\';'))
+  venue = next(g.conn.execute('select name, address from venues where vid = \'' + info['vid'] + '\';'))
+  host = next(g.conn.execute('select o.name from organizations o join hosts h on o.oid = h.oid where h.eid = ' + eid + ';'))['name']
+  
+  # querying the rsvped students and recruiters
   cursor = g.conn.execute('select s.uni, s.name, s.field, s.year from students s join rsvp_student r_s on s.uni = r_s.uni where r_s.eid = \'' + eid + '\';')
   students = []
   for student in cursor:
@@ -181,7 +185,8 @@ def event(eid):
     recruiter2['prof_opps'] = prof_opps
     recruiters.append(recruiter2)
   
-  return render_template("event.html", info=info, stu_count=len(students), rec_count=len(recruiters), students=students, recruiters=recruiters)
+  return render_template("event.html", info=info, stu_count=len(students), rec_count=len(recruiters), students=students, recruiters=recruiters, \
+					venue=venue, host=host)
 
 @app.route('/prof-opp/<pid>')
 def prof_opp(pid):

@@ -10,10 +10,12 @@
 <body>
   <form method="GET" action="/"><input type="submit" value="Back to Home Page"></form>
   <h1>{{info.name}}</h1>
-  <h3>{{info.field}}</h3>
-  <h3>{{info.start_time}}</h3>
-  <h3>{{info.end_time}}</h3>
-  <p>{{info.description}}</p>
+  <h3>Hosted by: {{host}}</h3>
+  <h3>Field: {{info.field}}</h3>
+  <h3>Start Time: {{info.start_time}}</h3>
+  <h3>End Time: {{info.end_time}}</h3>
+  <h3>Location: {{venue.name}}</h3><p>{{venue.address}}</p>
+  <p>Descripton: {{info.description}}</p>
   <div>
     <h3>RSVPed students (<span style="font-weight:bold;">{{stu_count}}</span> in total)</h3>
     {% for n in students %}
