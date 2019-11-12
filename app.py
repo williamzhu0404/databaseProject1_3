@@ -93,16 +93,41 @@ def index():
   context = dict(events = events)
   return render_template("index.html", **context)
 
-@app.route('/another')
-def another():
-  return render_template("another.html")
+@app.route('/rsvp')
+def rsvp():
+  return render_template("rsvp.html")
 
 
 # Example of adding new data to the database
-@app.route('/add', methods=['POST'])
-def add():
+@app.route('/rsvp-add', methods=['POST'])
+def rsvp_add():
   name = request.form['name']
-  g.conn.execute('INSERT INTO test(name) VALUES (\'' + name + '\');')
+  if (name == ''):
+    print("name is null") 
+    # deal with it!!!!!!!!!!!!!!!!! 
+  field = request.form['field'] 
+
+  if (request.form['identity'] == 'student'):
+    year = request.form['year'] 
+    uni = request.form['uni']
+    if (uni == ''): 
+      print("uni is null")
+      # deal with it!!!!!!!!!!!!!!!!! 
+
+    phone = request.form['phone']
+    
+    g.conn.execute('INSERT INTO students(uni, name, phone, field, year) VALUES (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\');' \
+		    % (uni, name, phone, field, year))
+  elif (request.form['identity'] == 'recruiter'):
+    company = request.form['company']
+    position = request.form['position']
+    
+    g.conn.execute('INSERT INTO recruiters(name, field, company, positon) VALUES (\'%s\', \'%s\', \'%s\', \'%s\');' \
+		    % (name, field, company, position))
+  else:
+    print("identity is neither student nor recruiter")
+    # throw error!!!!!!!!!!!!!!!!!!1
+
   return redirect('/')
 
 
