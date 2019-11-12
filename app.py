@@ -48,10 +48,11 @@ engine = create_engine(DATABASEURI)
 #
 
 class Event:
-  def __init__(self, name, field, description):
+  def __init__(self, eid, name, field, description):
     self.name = name
     self.field = field
     self.description = description
+    self.eid = eid
 
 @app.before_request
 def before_request():
@@ -87,48 +88,69 @@ def index():
   cursor = g.conn.execute("select * from events;")
   events = []
   for result in cursor:
-    events.append(Event(result['name'], result['field'], result['description']))
+    events.append(Event(result['eid'], result['name'], result['field'], result['description']))
   cursor.close()
   
   context = dict(events = events)
   return render_template("index.html", **context)
 
-@app.route('/rsvp')
-def rsvp():
-  return render_template("rsvp.html")
+@app.route('/rsvp/<eid>')
+def rsvp(eid):
+  name = g.conn.execute("select name from events where eid = \'" + eid + "\';")
+  return render_template("rsvp.html", eid=eid, name=next(name)['name'])
 
 
 # Example of adding new data to the database
 @app.route('/rsvp-add', methods=['POST'])
 def rsvp_add():
+  
+  print("rsvp-add page says hello; identity " + request.form['identity'] + " equals identity is " + str(request.form['identity'] == 'student'))
+  print(request.form)
+  eid = request.form['eid']
   name = request.form['name']
   if (name == ''):
     print("name is null") 
-    # deal with it!!!!!!!!!!!!!!!!! 
+    # TODO
   field = request.form['field'] 
 
-  if (request.form['identity'] == 'student'):
+  # when the person is a student
+  if (request.form['identity'].strip() == 'student'):
     year = request.form['year'] 
     uni = request.form['uni']
     if (uni == ''): 
       print("uni is null")
-      # deal with it!!!!!!!!!!!!!!!!! 
-
+      # TODO 
     phone = request.form['phone']
     
-    g.conn.execute('INSERT INTO students(uni, name, phone, field, year) VALUES (\'%s\', \'%s\', \'%s\', \'%s\', \'%s\');' \
-		    % (uni, name, phone, field, year))
-  elif (request.form['identity'] == 'recruiter'):
+    # insert student if not exists
+    g.conn.execute('INSERT INTO students(uni, name, phone, field, year) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\'' % (uni, name, phone, field, year) + \
+    		    'where not exists ( select * from students where uni = \'%s\');' % (uni))
+
+    # insert into RSVP AFTER ERROR CHECKING
+    # TODO: error checking
+    g.conn.execute('INSERT INTO rsvp_student(uni, eid, time) VALUES (\'%s\', \'%s\', date_trunc(\'second\', now())::timestamp);' % (uni, eid)) 
+
+  # when the person is a recruiter
+  elif (request.form['identity'].strip() == 'recruiter'):
     company = request.form['company']
     position = request.form['position']
     
-    g.conn.execute('INSERT INTO recruiters(name, field, company, positon) VALUES (\'%s\', \'%s\', \'%s\', \'%s\');' \
-		    % (name, field, company, position))
+    # insert recruiter if not exists
+    g.conn.execute('INSERT INTO recruiters(name, field, company, position) select \'%s\', \'%s\', \'%s\', \'%s\'' + \
+                    'where not exists ( select * from recruiters where name = \'%s\' and company = \'%s\');' % (name, field, company, position, name, company))
+  
+    # insert into RSVP AFTER ERROR CHECKING
+    # TODO: error checking
+    rid = g.conn.execute('select rid from recruiters where name = \'%s\' and company = \'%s\';')['rid']
+    g.conn.execute('INSERT INTO rsvp_student(rid, eid, time) VALUES (%d, \'%s\', now()::timestamp);' % (rid, eid))           
+  
   else:
     print("identity is neither student nor recruiter")
-    # throw error!!!!!!!!!!!!!!!!!!1
-
+    # TODO
+  print("eid:", request.form['eid'])
+  
   return redirect('/')
+
 
 
 @app.route('/login')

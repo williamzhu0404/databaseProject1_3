@@ -8,7 +8,7 @@
 
 
 <body>
-<h1>RSVP for an event</h1>
+<h1>RSVP for {{name}}</h1>
 
 <form method="POST" action="/rsvp-add">
 <p>Name: <input type="text" name="name"></p>
@@ -19,8 +19,8 @@
 <p>Phone: <input type="text" name="phone"></p> 
 <p>Company: <input type="text" name="company"></p> 
 <p>Position: <input type="text" name="position"></p>
-<input type="submit" value="RSVP!" >
- 
+<input type="hidden" name="eid" value="{{eid}}">
+<input type="submit" value="RSVP Now!">
 </form>
 
 </body>
