@@ -106,8 +106,9 @@ def apply_add():
 
 @app.route('/rsvp/<eid>')
 def rsvp(eid):
+  fields = list(g.conn.execute("select distinct field from events"))
   name = g.conn.execute("select name from events where eid = \'" + eid + "\';")
-  return render_template("rsvp.html", eid=eid, name=next(name)['name'])
+  return render_template("rsvp.html", eid=eid, name=next(name)['name'], fields=fields)
 
 
 # Example of adding new data to the database
