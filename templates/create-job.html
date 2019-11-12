@@ -5,11 +5,26 @@
       font-family: arial;
     }
   </style>
-
+  <head>
+  <title>Create Your Job Posting!</title>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+  <script>
+        $(document).ready(function() {
+                $(".error").load(function() {
+                        if($(this).val() != ''){
+                                $(this).show();
+                        } else {
+                                $(this).hide();
+                        }
+                });
+        });
+  </script>  
+  </head>
 
 <body>
 <h1>Create Your Job Posting!</h1>
 
+<div class=".error" value={{error}}><font color="red">{{error}}</font></div>
 <form method="POST" action="/create-job-add">
 <p>Name: <input type="text" name="name"></p>
 <p>Job Type: 

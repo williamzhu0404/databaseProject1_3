@@ -19,6 +19,13 @@ $(document).ready(function(){
                         $(".recruiter").show();
                 }
         });
+	$(".error").load(function() {
+                if($(this).val() != ''){
+                        $(this).show();
+                } else {
+                        $(this).hide();
+                }
+        });
 });
 </script>
 
@@ -27,6 +34,7 @@ $(document).ready(function(){
 <body>
 <h1>RSVP for {{name}}</h1>
 
+<div class=".error" value={{error}}><font color="red">{{error}}</font></div>
 <form method="POST" action="/rsvp-add">
 <p>Identity: <select id="identity-select" name="identity">
   <option value="none">---PLEASE CHOOSE ONE---</option>
@@ -51,7 +59,7 @@ $(document).ready(function(){
 <div class="recruiter">Position: <input type="text" name="position"></div>
 <input type="hidden" name="eid" value="{{eid}}">
 <input type="submit" value="RSVP Now!">
-</form>
+</form><form method="GET" action="/"><input type="submit" value="Cancel"></form>
 
 </body>
 

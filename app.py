@@ -75,7 +75,8 @@ def index(time_constraint):
   context = dict(events = events, fields = fields)
   return render_template("index.html", **context)
 
-@app.route('/apply/<pid>', defaults={"error":''})
+# don't remove the trailing '/' for the first url; VERY IMPORTANT!
+@app.route('/apply/<pid>/', defaults={"error":''})
 @app.route('/apply/<pid>/<error>')
 def apply(pid, error):
   name = next(g.conn.execute(text("select name from prof_opps where pid = :pid;"), pid=int(pid)))['name']
@@ -105,11 +106,12 @@ def apply_add():
   g.conn.execute(text('INSERT INTO applies_to(uni, pid, time) VALUES (:uni, :pid, date_trunc(\'second\', now())::timestamp);'), uni=uni, pid=int(pid))
   return redirect('/')
 
-@app.route('/rsvp/<eid>')
-def rsvp(eid):
+@app.route('/rsvp/<eid>/', defaults={"error":''})
+@app.route('/rsvp/<eid>/<error>')
+def rsvp(eid, error):
   fields = list(g.conn.execute("select distinct field from events"))
   name = g.conn.execute(text("select name from events where eid = :eid"), eid=int(eid)) 
-  return render_template("rsvp.html", eid=eid, name=next(name)['name'], fields=fields)
+  return render_template("rsvp.html", error=error, eid=eid, name=next(name)['name'], fields=fields)
 
 
 # Example of adding new data to the database
@@ -119,8 +121,7 @@ def rsvp_add():
   eid = request.form['eid']
   name = request.form['name']
   if (name == ''):
-    print("name is null") 
-    # TODO
+    return redirect('/rsvp/%d/%s' % (int(eid), "name cannot be null!"))
   field = request.form['field'] 
 
   # when the person is a student
@@ -128,8 +129,7 @@ def rsvp_add():
     year = request.form['year'] 
     uni = request.form['uni']
     if (uni == ''): 
-      print("uni is null")
-      # TODO 
+      return redirect('/rsvp/%d/%s' % (int(eid), "uni cannot be null!"))
     phone = request.form['phone']
     
     # insert student if not exists
@@ -153,9 +153,8 @@ def rsvp_add():
     g.conn.execute(text('INSERT INTO rsvp_recruiter(rid, eid, time) VALUES (:rid, :eid, now()::timestamp);'), rid=int(rid), eid=int(eid))       
   
   else:
-    print("identity is neither student nor recruiter")
-    # TODO
-  
+    return redirect('/rsvp/%d/%s' % (int(eid), "Please choose either of the two identities!"))
+ 
   return redirect('/')
 
 
@@ -193,21 +192,22 @@ def prof_opp(pid):
 
   return render_template("prof_opp.html", opp=opp, company=company, stu_count=stu_count)
 
-@app.route('/create-event')
-def create_event():
+@app.route('/create-event/', defaults={"error":''})
+@app.route('/create-event/<error>')
+def create_event(error):
   fields= list(g.conn.execute('select distinct field from students'))
   organizations=list(g.conn.execute('select distinct name from organizations'))
   venues=list(g.conn.execute('select distinct name from venues')) 
   
-  context = dict(fields=fields, organizations=organizations, venues=venues)
+  context = dict(error=error, fields=fields, organizations=organizations, venues=venues)
   return render_template("create-event.html", **context)
 
 @app.route('/create-event-add', methods=['POST'])
 def create_event_add():
   name = request.form['name']
   if (name == ''):
-    print("event without name")
-    # TODO
+    return redirect('/create-event/%s' % 'name cannot be null!')
+
   print("create event add: the request", request.form)
   start_time = request.form['start-time']
   end_time = request.form['end-time']
@@ -220,9 +220,7 @@ def create_event_add():
   	vid = g.conn.execute(text("select vid from venues where name = :name;"), name=venue).fetchone()['vid']
   	print("vid,", vid) 
   except:
-	print("the venue is wrong")
-	# TODO
-	return redirect('/error-message/venue-is-wrong')
+	return redirect('/create-event/%s' % 'Please choose a venue on the designated list.')
 
   # insert event if does not exist
   g.conn.execute(text('INSERT INTO events(name, field, vid, description, start_time, end_time) select :name, :field, :vid, :description, :start_time, :end_time where not exists ( select * from events where name = :name and field = :field );'), name=name, field=field, vid=vid, description=description, start_time=start_time, end_time=end_time)
@@ -232,34 +230,32 @@ def create_event_add():
   	oid = g.conn.execute(text("select oid from organizations where name = :name"), name=organization).fetchone()['oid']
   	print("eid and oid:", eid, oid)
   except:
-	print("the organization is wrong")
-        # TODO
-        return redirect('/error-message/organization-is-wrong')
+	return redirect('/create-event/%s' % 'Please choose an organization on the designated list.')
 
   # insert into hosts relation
   g.conn.execute(text('insert into hosts(oid, eid) values (:oid, :eid);'), oid=oid, eid=int(eid)) 
  
   return redirect('/')
 
-
-@app.route('/create-job/<rid>')
-def create_job(rid):
+@app.route('/create-job/<rid>/<error>')
+@app.route('/create-job/<rid>/', defaults={"error":''})
+def create_job(rid, error):
   jobtypes = list(g.conn.execute('select distinct job_type from prof_opps'))
   fields= list(g.conn.execute('select distinct field from students'))
-  return render_template("create-job.html", rid=rid, jobtypes=jobtypes, fields=fields)
+  return render_template("create-job.html", error=error, rid=rid, jobtypes=jobtypes, fields=fields)
 
 @app.route('/create-job-add', methods=['POST'])
 def create_job_add():
   
   name = request.form['name']
+  rid = request.form['rid']
   if (name == ''):
-    return redirect("/error-message/job-without-name")
-    # TODO
+    return redirect('/create-job/%d/%s' % (int(rid), "name cannot be null!"))
+
   start_time = request.form['start-time']
   end_time = request.form['end-time']
   field = request.form['field']
   job_type= request.form['job-type']
-  rid = request.form['rid']
 
   # insert event if does not exist
   g.conn.execute(text('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select :name, :field, :job_type, :start_time, :end_time, :rid where not exists ( select * from prof_opps where name = :name and field = :field and rid = :rid);'), name=name, field=field, job_type=job_type, start_time=start_time, end_time=end_time, rid=int(rid))
