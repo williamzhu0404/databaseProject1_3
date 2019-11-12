@@ -211,6 +211,9 @@ def create_event_add():
   print("create event add: the request", request.form)
   start_time = request.form['start-time']
   end_time = request.form['end-time']
+  if (start_time == '' or end_time == ''):
+    return redirect('/create-event/%s' % 'time cannot be null!')
+
   field = request.form['field']
   venue = request.form['venue']
   description = request.form['description']
@@ -254,6 +257,9 @@ def create_job_add():
 
   start_time = request.form['start-time']
   end_time = request.form['end-time']
+  if (start_time == '' or end_time == ''):
+    return redirect('/create-job/%d/%s' % (int(rid), 'time cannot be null!'))
+
   field = request.form['field']
   job_type= request.form['job-type']
 
