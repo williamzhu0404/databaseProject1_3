@@ -10,6 +10,12 @@
 <body>
   <h1>Campus Events</h1>
   <a href='/create-event'><h3>Post Your Own Event</h3></a>
+  <h4>Filter by field: </h4><ul>
+    {% for field in fields %}
+    <li><p><a href='/{{field.field}}'>{{field.field}}</a></p></li>
+    {% endfor %}
+  </ul>
+  <div></div>
   <div>
     {% for event in events %}
     <div>

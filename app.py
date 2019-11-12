@@ -55,8 +55,9 @@ def teardown_request(exception):
 #       @app.route("/foobar/", methods=["POST", "GET"])
 #
 # PROTIP: (the trailing / in the path is important)
-@app.route('/')
-def index():
+@app.route('/', defaults={'field': None})
+@app.route('/<field>')
+def index(field):
   """
   request.method:   "GET" or "POST"
   request.form:     if the browser submitted a form, this contains the data in the form
@@ -68,10 +69,12 @@ def index():
   cursor = g.conn.execute("select * from events;")
   events = []
   for result in cursor:
-    events.append(Event(result['eid'], result['name'], result['field'], result['description']))
+    if (not field or result['field'] == field):
+      events.append(Event(result['eid'], result['name'], result['field'], result['description']))
   cursor.close()
   
-  context = dict(events = events)
+  fields = list(g.conn.execute("select distinct field from events"))
+  context = dict(events = events, fields = fields)
   return render_template("index.html", **context)
 
 @app.route('/apply/<pid>')
