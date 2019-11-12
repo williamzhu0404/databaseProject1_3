@@ -269,9 +269,12 @@ def create_job_add():
 
 @app.route('/recruiter/<rid>')
 def recruiter(rid):
+  past_events = list(g.conn.execute(text('select e.eid, e.name, e.start_time from events e join rsvp_recruiter r on e.eid = r.eid where r.rid=:rid and e.start_time < now()::timestamp;'), rid=int(rid)))
+  events = list(g.conn.execute(text('select e.eid, e.name, e.start_time from events e join rsvp_recruiter r on e.eid = r.eid' 
+				     ' where r.rid=:rid and e.start_time > now()::timestamp;'), rid=int(rid)))
   rec = g.conn.execute(text('select * from recruiters where rid = :rid;'), rid=int(rid)).fetchone()
   prof_opps = list(g.conn.execute(text('select * from prof_opps where rid = :rid;'), rid=int(rid)))
-  return render_template("recruiter.html", rec=rec, prof_opps=prof_opps)
+  return render_template("recruiter.html", rec=rec, prof_opps=prof_opps, events=events, past_events=past_events)
 
 #temporary coping with errors
 @app.route('/error-message/<msg>')
