@@ -191,6 +191,53 @@ def prof_opp(pid):
 
   return render_template("prof_opp.html", opp=opp, company=company, stu_count=stu_count)
 
+@app.route('/create-event')
+def create_event():
+  return render_template("create-event.html")
+
+@app.route('/create-event-add', methods=['POST'])
+def create_event_add():
+  name = request.form['name']
+  if (name == ''):
+    print("event without name")
+    # TODO
+  print("create event add: the request", request.form)
+  start_time = request.form['start-time']
+  end_time = request.form['end-time']
+  field = request.form['field']
+  venue = request.form['venue']
+  description = request.form['description']
+  organization = request.form['organization']
+  try:   
+  	vid = next(g.conn.execute('select vid from venues where name = \'' + venue + '\';'))['vid']
+  	print("vid,", vid) 
+  except:
+	print("the venue is wrong")
+	# TODO
+	return redirect('/error-message/venue-is-wrong')
+
+  # insert event if does not exist
+  g.conn.execute('INSERT INTO events(name, field, vid, description, start_time, end_time) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', \'%s\' where not exists ( select * from events where name = \'%s\' and field = \'%s\');' % (name, field, vid, description, start_time, end_time, name, field))
+  
+  try:
+  	eid = next(g.conn.execute('select eid from events where name = \'' + name + '\' and field = \'' + field + '\';'))['eid']
+  	oid = next(g.conn.execute('select oid from organizations where name = \'' + organization + '\';'))['oid']
+  	print("eid and oid:", eid, oid)
+  except:
+	print("the organization is wrong")
+        # TODO
+        return redirect('/error-message/organization-is-wrong')
+
+  # insert into hosts relation
+  g.conn.execute('insert into hosts(oid, eid) values (\'%s\', %d)' % (oid, int(eid))) 
+ 
+  return redirect('/')
+
+#temporary coping with errors
+@app.route('/error-message/<msg>')
+def error_message(msg):
+  return render_template("error-message.html", msg=msg)
+
 if __name__ == "__main__":
   import click
 
