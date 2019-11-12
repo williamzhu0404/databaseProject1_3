@@ -46,9 +46,6 @@ engine = create_engine(DATABASEURI)
 # Example of running queries in your database
 # Note that this will probably not work if you already have a table named 'test' in your database, containing meaningful data. This is only an example showing you how to run queries in your database using SQLAlchemy.
 #
-engine.execute("CREATE TABLE IF NOT EXISTS test (id serial, name text);")
-engine.execute("INSERT INTO test(name) VALUES ('grace hopper'), ('alan turing'), ('ada lovelace');")
-
 
 @app.before_request
 def before_request():
@@ -76,7 +73,6 @@ def teardown_request(exception):
     g.conn.close()
   except Exception as e:
     pass
-
 
 #
 # @app.route is a decorator around index() that means:
@@ -168,7 +164,7 @@ def another():
 @app.route('/add', methods=['POST'])
 def add():
   name = request.form['name']
-  g.conn.execute('INSERT INTO test VALUES (NULL, ?)', name)
+  g.conn.execute('INSERT INTO test(name) VALUES (\'' + name + '\');')
   return redirect('/')
 
 
