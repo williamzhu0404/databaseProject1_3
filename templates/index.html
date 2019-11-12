@@ -20,9 +20,13 @@
     {% for event in events %}
     <div>
         <a href="event/{{event.eid}}"><h3>{{event.name}}</h3></a>
-	<p>{{event.field}}</p>
+	<p>Field: {{event.field}} - Start Time: {{event.start_time}}</p>
 	<p>{{event.description}}</p>
-	<a href="rsvp/{{event.eid}}">RSVP</a> 
+	{% if event.outdated == "false" %}
+          <a href="rsvp/{{event.eid}}">RSVP</a>
+        {% else %}
+          <em>Event has expired</em>
+        {% endif %} 
     </div>
     {% endfor %}
   </div>

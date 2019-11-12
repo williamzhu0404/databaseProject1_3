@@ -18,6 +18,7 @@ import os
 from sqlalchemy import *
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response
+import datetime
 
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
@@ -26,13 +27,6 @@ app = Flask(__name__, template_folder=tmpl_dir)
 DATABASEURI = "postgresql://yw3241:7276@34.74.165.156/proj1part2"
 
 engine = create_engine(DATABASEURI)
-
-class Event:
-  def __init__(self, eid, name, field, description):
-    self.name = name
-    self.field = field
-    self.description = description
-    self.eid = eid
 
 @app.before_request
 def before_request():
@@ -66,11 +60,14 @@ def index(field):
 
   print request.args
 
-  cursor = g.conn.execute("select * from events;")
+  cursor = g.conn.execute("select * from events order by start_time desc;")
   events = []
+  formatter = '%Y-%m-%d %H:%M:%S'
   for result in cursor:
     if (not field or result['field'] == field):
-      events.append(Event(result['eid'], result['name'], result['field'], result['description']))
+      event = dict(result)
+      event['outdated'] = str(event['start_time'] > datetime.datetime.now())
+      events.append(event)
   cursor.close()
   
   fields = list(g.conn.execute("select distinct field from events"))
