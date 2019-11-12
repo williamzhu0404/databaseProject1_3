@@ -16,6 +16,7 @@ Read about it online.
 
 import os
 from sqlalchemy import *
+from sqlalchemy import exc
 from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response
@@ -24,6 +25,10 @@ import datetime
 tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
+NAME_SIZE = 70
+DESC_SIZE = 280
+MED_SIZE = 140
+PHONE_LEN = 10
 
 DATABASEURI = "postgresql://yw3241:7276@34.74.165.156/proj1part2"
 
@@ -131,26 +136,31 @@ def rsvp_add():
     if (uni == ''): 
       return redirect('/rsvp/%d/%s' % (int(eid), "uni cannot be null!"))
     phone = request.form['phone']
-    
     # insert student if not exists
-    g.conn.execute(text('INSERT INTO students(uni, name, phone, field, year) select :uni, :name, :phone, :field, :year where not exists ( select * from students where uni = :uni);'), uni=uni, name=name, phone=phone, field=field, year=year)
+    try: 
+      g.conn.execute(text('INSERT INTO students(uni, name, phone, field, year) select :uni, :name, :phone, :field, :year where not exists ( select * from students where uni = :uni);'), uni=uni, name=name, phone=phone, field=field, year=year)
 
-    # insert into RSVP AFTER ERROR CHECKING
-    # TODO: error checking
-    g.conn.execute(text('INSERT INTO rsvp_student(uni, eid, time) VALUES (:uni, :eid, date_trunc(\'second\', now())::timestamp);'), uni=uni, eid=int(eid)) 
+      # insert into RSVP AFTER ERROR CHECKING
+      g.conn.execute(text('INSERT INTO rsvp_student(uni, eid, time) VALUES (:uni, :eid, date_trunc(\'second\', now())::timestamp);'), uni=uni, eid=int(eid)) 
+
+    except exc.SQLAlchemyError as err:
+      return redirect('/rsvp/%d/%s' % (int(eid), "database exception; please be mindful of the input lengths"))
 
   # when the person is a recruiter
   elif (request.form['identity'].strip() == 'recruiter'):
     company = request.form['company']
     position = request.form['position']
     
-    # insert recruiter if not exists
-    g.conn.execute(text('INSERT INTO recruiters(name, field, company, position) select :name, :field, :company, :position where not exists ( select * from recruiters where name = :name and company = :company);'), name=name, field=field, company=company, position=position)
+    try: 
+      # insert recruiter if not exists
+      g.conn.execute(text('INSERT INTO recruiters(name, field, company, position) select :name, :field, :company, :position where not exists ( select * from recruiters where name = :name and company = :company);'), name=name, field=field, company=company, position=position)
   
-    # insert into RSVP AFTER ERROR CHECKING
-    # TODO: error checking
-    rid = g.conn.execute(text('select rid from recruiters where name = :name and company = :company;'), name=name, company=company).fetchone()['rid']
-    g.conn.execute(text('INSERT INTO rsvp_recruiter(rid, eid, time) VALUES (:rid, :eid, now()::timestamp);'), rid=int(rid), eid=int(eid))       
+      # insert into RSVP AFTER ERROR CHECKING
+      rid = g.conn.execute(text('select rid from recruiters where name = :name and company = :company;'), name=name, company=company).fetchone()['rid']
+      g.conn.execute(text('INSERT INTO rsvp_recruiter(rid, eid, time) VALUES (:rid, :eid, now()::timestamp);'), rid=int(rid), eid=int(eid))       
+
+    except exc.SQLAlchemyError as err:
+      return redirect('/rsvp/%d/%s' % (int(eid), "database exception; please be mindful of the input lengths"))
   
   else:
     return redirect('/rsvp/%d/%s' % (int(eid), "Please choose either of the two identities!"))
@@ -226,8 +236,12 @@ def create_event_add():
 	return redirect('/create-event/%s' % 'Please choose a venue on the designated list.')
 
   # insert event if does not exist
-  g.conn.execute(text('INSERT INTO events(name, field, vid, description, start_time, end_time) select :name, :field, :vid, :description, :start_time, :end_time where not exists ( select * from events where name = :name and field = :field );'), name=name, field=field, vid=vid, description=description, start_time=start_time, end_time=end_time)
-  
+  try: 
+    g.conn.execute(text('INSERT INTO events(name, field, vid, description, start_time, end_time) select :name, :field, :vid, :description, :start_time, :end_time where not exists ( select * from events where name = :name and field = :field );'), name=name, field=field, vid=vid, description=description, start_time=start_time, end_time=end_time)
+
+  except exc.SQLAlchemyError as err:
+    return redirect('/create-event/%s' % ("database exception; please be mindful of the input lengths"))
+
   try:
   	eid = g.conn.execute(text("select eid from events where name = :name and field = :field;"), name=name, field=field).fetchone()['eid']
   	oid = g.conn.execute(text("select oid from organizations where name = :name"), name=organization).fetchone()['oid']
@@ -236,7 +250,10 @@ def create_event_add():
 	return redirect('/create-event/%s' % 'Please choose an organization on the designated list.')
 
   # insert into hosts relation
-  g.conn.execute(text('insert into hosts(oid, eid) values (:oid, :eid);'), oid=oid, eid=int(eid)) 
+  try: 
+    g.conn.execute(text('insert into hosts(oid, eid) values (:oid, :eid);'), oid=oid, eid=int(eid)) 
+  except exc.SQLAlchemyError as err:
+    return redirect('/create-event/%s' % ("database exception; please be mindful of the input lengths"))
  
   return redirect('/')
 
@@ -262,9 +279,13 @@ def create_job_add():
 
   field = request.form['field']
   job_type= request.form['job-type']
+  
+  try: 
+    # insert event if does not exist
+    g.conn.execute(text('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select :name, :field, :job_type, :start_time, :end_time, :rid where not exists ( select * from prof_opps where name = :name and field = :field and rid = :rid);'), name=name, field=field, job_type=job_type, start_time=start_time, end_time=end_time, rid=int(rid))
 
-  # insert event if does not exist
-  g.conn.execute(text('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select :name, :field, :job_type, :start_time, :end_time, :rid where not exists ( select * from prof_opps where name = :name and field = :field and rid = :rid);'), name=name, field=field, job_type=job_type, start_time=start_time, end_time=end_time, rid=int(rid))
+  except exc.SQLAlchemyError as err:
+    return redirect('/create-job/%d/%s' % (int(rid), "database exception; please be mindful of the input lengths"))
 
   return redirect('/recruiter/' + rid)
 
