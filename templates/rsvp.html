@@ -6,20 +6,11 @@
   }
 </style>
 <head>
-<title>JobEvity</title>
+<title>RSVP For an Event</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script>
 $(document).ready(function(){
         $("#identity-select").change(function() {
-                if($(this).val() == "student"){
-                        $(".student").show();
-                        $(".recruiter").hide();
-                } else {
-                        $(".student").hide();
-                        $(".recruiter").show();
-                }
-        });
-	$("#identity-select").ready(function() {
                 if($(this).val() == "student"){
                         $(".student").show();
                         $(".recruiter").hide();
@@ -38,6 +29,7 @@ $(document).ready(function(){
 
 <form method="POST" action="/rsvp-add">
 <p>Identity: <select id="identity-select" name="identity">
+  <option value="none">---PLEASE CHOOSE ONE---</option>
   <option value="student">student</option>
   <option value="recruiter">recruiter</option>
 </select></p>

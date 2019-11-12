@@ -16,6 +16,7 @@ Read about it online.
 
 import os
 from sqlalchemy import *
+from sqlalchemy.sql import text
 from sqlalchemy.pool import NullPool
 from flask import Flask, request, render_template, g, redirect, Response
 import datetime
@@ -49,9 +50,9 @@ def teardown_request(exception):
 #       @app.route("/foobar/", methods=["POST", "GET"])
 #
 # PROTIP: (the trailing / in the path is important)
-@app.route('/', defaults={'field': None})
-@app.route('/<field>')
-def index(field):
+@app.route('/', defaults={'time_constraint': None})
+@app.route('/<int:time_constraint>')
+def index(time_constraint):
   """
   request.method:   "GET" or "POST"
   request.form:     if the browser submitted a form, this contains the data in the form
@@ -64,7 +65,7 @@ def index(field):
   events = []
   formatter = '%Y-%m-%d %H:%M:%S'
   for result in cursor:
-    if (not field or result['field'] == field):
+    if (not time_constraint or abs((datetime.datetime.now() - result['start_time']).days) < time_constraint):
       event = dict(result)
       event['outdated'] = str(event['start_time'] < datetime.datetime.now())
       events.append(event)
@@ -76,18 +77,19 @@ def index(field):
 
 @app.route('/apply/<pid>')
 def apply(pid):
-  name = next(g.conn.execute("select name from prof_opps where pid = " + pid + ";"))['name']
-  return render_template("apply.html", pid=pid, name=name)
+  name = next(g.conn.execute(text("select name from prof_opps where pid = :pid;"), pid=int(pid)))['name']
+  fields = list(g.conn.execute("select distinct field from students;"))
+  return render_template("apply.html", fields=fields, pid=pid, name=name)
 
 @app.route('/apply-add', methods=['POST'])
 def apply_add():
   pid = request.form['pid']
-  name = request.form['name']
+  name = request.form['name'] 
   if (name == ''):
     print("name is null") 
     # TODO
-  field = request.form['field']
-  year = request.form['year'] 
+  field = request.form['field'] 
+  year = request.form['year']
   uni = request.form['uni']
   if (uni == ''): 
     print("uni is null")
@@ -95,19 +97,18 @@ def apply_add():
   phone = request.form['phone']
 
   # insert the student if not exist
-  g.conn.execute('INSERT INTO students(uni, name, phone, field, year) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\'' % (uni, name, phone, field, year) + \
-                    'where not exists ( select * from students where uni = \'%s\');' % (uni))
+  s = text("INSERT INTO students(uni, name, phone, field, year) select :uni, :name, :phone, :field, :year where not exists ( select * from students where uni = :uni);") 
+  g.conn.execute(s, uni=uni, name=name, phone=phone, field=field, year=year)
 
   # insert into applies_to
   # TODO: error checking
-  g.conn.execute('INSERT INTO applies_to(uni, pid, time) VALUES (\'%s\', %d, date_trunc(\'second\', now())::timestamp);' % (uni, int(pid)));
-  
+  g.conn.execute(text('INSERT INTO applies_to(uni, pid, time) VALUES (:uni, :pid, date_trunc(\'second\', now())::timestamp);'), uni=uni, pid=int(pid))
   return redirect('/')
 
 @app.route('/rsvp/<eid>')
 def rsvp(eid):
   fields = list(g.conn.execute("select distinct field from events"))
-  name = g.conn.execute("select name from events where eid = \'" + eid + "\';")
+  name = g.conn.execute(text("select name from events where eid = :eid"), eid=int(eid)) 
   return render_template("rsvp.html", eid=eid, name=next(name)['name'], fields=fields)
 
 
@@ -115,8 +116,6 @@ def rsvp(eid):
 @app.route('/rsvp-add', methods=['POST'])
 def rsvp_add():
 
-  print("rsvp-add page says hello; identity " + request.form['identity'] + " equals identity is " + str(request.form['identity'] == 'student'))
-  print(request.form)
   eid = request.form['eid']
   name = request.form['name']
   if (name == ''):
@@ -134,12 +133,11 @@ def rsvp_add():
     phone = request.form['phone']
     
     # insert student if not exists
-    g.conn.execute('INSERT INTO students(uni, name, phone, field, year) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\'' % (uni, name, phone, field, year) + \
-    		    'where not exists ( select * from students where uni = \'%s\');' % (uni))
+    g.conn.execute(text('INSERT INTO students(uni, name, phone, field, year) select :uni, :name, :phone, :field, :year where not exists ( select * from students where uni = :uni);'), uni=uni, name=name, phone=phone, field=field, year=year)
 
     # insert into RSVP AFTER ERROR CHECKING
     # TODO: error checking
-    g.conn.execute('INSERT INTO rsvp_student(uni, eid, time) VALUES (\'%s\', %d, date_trunc(\'second\', now())::timestamp);' % (uni, int(eid))) 
+    g.conn.execute(text('INSERT INTO rsvp_student(uni, eid, time) VALUES (:uni, :eid, date_trunc(\'second\', now())::timestamp);'), uni=uni, eid=int(eid)) 
 
   # when the person is a recruiter
   elif (request.form['identity'].strip() == 'recruiter'):
@@ -147,39 +145,37 @@ def rsvp_add():
     position = request.form['position']
     
     # insert recruiter if not exists
-    g.conn.execute('INSERT INTO recruiters(name, field, company, position) select \'%s\', \'%s\', \'%s\', \'%s\'' + \
-                    'where not exists ( select * from recruiters where name = \'%s\' and company = \'%s\');' % (name, field, company, position, name, company))
+    g.conn.execute(text('INSERT INTO recruiters(name, field, company, position) select :name, :field, :company, :position where not exists ( select * from recruiters where name = :name and company = :company);'), name=name, field=field, company=company, position=position)
   
     # insert into RSVP AFTER ERROR CHECKING
     # TODO: error checking
-    rid = g.conn.execute('select rid from recruiters where name = \'%s\' and company = \'%s\';')['rid']
-    g.conn.execute('INSERT INTO rsvp_student(rid, eid, time) VALUES (%d, %d, now()::timestamp);' % (int(rid), int(eid)))           
+    rid = g.conn.execute(text('select rid from recruiters where name = :name and company = :company;'), name=name, company=company).fetchone()['rid']
+    g.conn.execute(text('INSERT INTO rsvp_recruiter(rid, eid, time) VALUES (:rid, :eid, now()::timestamp);'), rid=int(rid), eid=int(eid))       
   
   else:
     print("identity is neither student nor recruiter")
     # TODO
-  print("eid:", request.form['eid'])
   
   return redirect('/')
 
 
 @app.route('/event/<eid>')
 def event(eid):
-  info = next(g.conn.execute('select * from events where eid = \'' + eid + '\';'))
-  venue = next(g.conn.execute('select name, address from venues where vid = \'' + info['vid'] + '\';'))
-  host = next(g.conn.execute('select o.name from organizations o join hosts h on o.oid = h.oid where h.eid = ' + eid + ';'))['name']
+  info = g.conn.execute(text('select * from events where eid = :eid;'), eid=int(eid)).fetchone()
+  venue = g.conn.execute(text('select name, address from venues where vid = :vid;'), vid=info['vid']).fetchone()
+  host = g.conn.execute(text('select o.name from organizations o join hosts h on o.oid = h.oid where h.eid = :eid;'), eid=int(eid)).fetchone()['name']
   
   # querying the rsvped students and recruiters
-  cursor = g.conn.execute('select s.uni, s.name, s.field, s.year from students s join rsvp_student r_s on s.uni = r_s.uni where r_s.eid = \'' + eid + '\';')
+  cursor = g.conn.execute(text('select s.uni, s.name, s.field, s.year from students s join rsvp_student r_s on s.uni = r_s.uni where r_s.eid = :eid;'), eid=int(eid))
   students = []
   for student in cursor:
     students.append(student)
 
-  cursor = g.conn.execute('select r.rid, r.name, r.field, r.company, r.position from recruiters r join rsvp_recruiter r_r on r.rid = r_r.rid where r_r.eid = \'' + eid + '\';')
+  cursor = g.conn.execute(text('select r.rid, r.name, r.field, r.company, r.position from recruiters r join rsvp_recruiter r_r on r.rid = r_r.rid where r_r.eid = :eid;'), eid=int(eid))
   recruiters = []
   for recruiter in cursor:
     prof_opps = []
-    cursor2 = g.conn.execute('select p.pid, p.name from prof_opps p where p.rid = ' + str(recruiter['rid']) + ';')
+    cursor2 = g.conn.execute(text('select p.pid, p.name from prof_opps p where p.rid = :rid;'), rid=int(recruiter['rid']))
     for prof_opp in cursor2:
 	prof_opps.append(prof_opp)
     recruiter2 = dict(recruiter)
@@ -191,9 +187,9 @@ def event(eid):
 
 @app.route('/prof-opp/<pid>')
 def prof_opp(pid):
-  opp = next(g.conn.execute('select * from prof_opps where pid = \'' + pid + '\';'))
-  company = next(g.conn.execute('select r.company from recruiters r join prof_opps p on r.rid = p.rid where p.pid = \'' + pid + '\';'))['company']
-  stu_count = next(g.conn.execute('select count(*) as count from students s join applies_to a on s.uni = a.uni where a.pid = \'' + pid + '\';'))['count']
+  opp = g.conn.execute(text('select * from prof_opps where pid = :pid;'), pid=pid).fetchone()
+  company = g.conn.execute(text('select r.company from recruiters r join prof_opps p on r.rid = p.rid where p.pid = :pid;'), pid=pid).fetchone()['company'] 
+  stu_count = g.conn.execute(text('select count(*) as count from students s join applies_to a on s.uni = a.uni where a.pid = :pid;'), pid=pid).fetchone()['count']
 
   return render_template("prof_opp.html", opp=opp, company=company, stu_count=stu_count)
 
@@ -221,7 +217,7 @@ def create_event_add():
   organization = request.form['organization']
   print("the venue gotton is", venue)
   try:   
-  	vid = next(g.conn.execute("select vid from venues where name = '" + venue + "';"))['vid']
+  	vid = g.conn.execute(text("select vid from venues where name = :name;"), name=venue).fetchone()['vid']
   	print("vid,", vid) 
   except:
 	print("the venue is wrong")
@@ -229,11 +225,11 @@ def create_event_add():
 	return redirect('/error-message/venue-is-wrong')
 
   # insert event if does not exist
-  g.conn.execute('INSERT INTO events(name, field, vid, description, start_time, end_time) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', \'%s\' where not exists ( select * from events where name = \'%s\' and field = \'%s\');' % (name, field, vid, description, start_time, end_time, name, field))
+  g.conn.execute(text('INSERT INTO events(name, field, vid, description, start_time, end_time) select :name, :field, :vid, :description, :start_time, :end_time where not exists ( select * from events where name = :name and field = :field );'), name=name, field=field, vid=vid, description=description, start_time=start_time, end_time=end_time)
   
   try:
-  	eid = next(g.conn.execute("select eid from events where name = '" + name + "' and field = '" + field + "';"))['eid']
-  	oid = next(g.conn.execute("select oid from organizations where name = '" + organization + "';"))['oid']
+  	eid = g.conn.execute(text("select eid from events where name = :name and field = :field;"), name=name, field=field).fetchone()['eid']
+  	oid = g.conn.execute(text("select oid from organizations where name = :name"), name=organization).fetchone()['oid']
   	print("eid and oid:", eid, oid)
   except:
 	print("the organization is wrong")
@@ -241,7 +237,7 @@ def create_event_add():
         return redirect('/error-message/organization-is-wrong')
 
   # insert into hosts relation
-  g.conn.execute('insert into hosts(oid, eid) values (\'%s\', %d)' % (oid, int(eid))) 
+  g.conn.execute(text('insert into hosts(oid, eid) values (:oid, :eid);'), oid=oid, eid=int(eid)) 
  
   return redirect('/')
 
@@ -266,15 +262,15 @@ def create_job_add():
   rid = request.form['rid']
 
   # insert event if does not exist
-  g.conn.execute('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %s where not exists ( select * from prof_opps where name = \'%s\' and field = \'%s\' and rid = %s);' % (name, field, job_type, start_time, end_time, rid, name, field, rid))
+  g.conn.execute(text('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select :name, :field, :job_type, :start_time, :end_time, :rid where not exists ( select * from prof_opps where name = :name and field = :field and rid = :rid);'), name=name, field=field, job_type=job_type, start_time=start_time, end_time=end_time, rid=int(rid))
 
   return redirect('/recruiter/' + rid)
 
 
 @app.route('/recruiter/<rid>')
 def recruiter(rid):
-  rec = next(g.conn.execute('select * from recruiters where rid = ' + rid + ';'))
-  prof_opps = list(g.conn.execute('select * from prof_opps where rid = ' + rid + ';'))
+  rec = g.conn.execute(text('select * from recruiters where rid = :rid;'), rid=int(rid)).fetchone()
+  prof_opps = list(g.conn.execute(text('select * from prof_opps where rid = :rid;'), rid=int(rid)))
   return render_template("recruiter.html", rec=rec, prof_opps=prof_opps)
 
 #temporary coping with errors

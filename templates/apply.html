@@ -12,9 +12,18 @@
 
 <form method="POST" action="/apply-add">
 <p>Name: <input type="text" name="name"></p>
-<p>Field: <input type="text" name="field"></p>
+<p>Field: <input type="text" name="field", list="fields"><datalist id="fields">
+  {% for field in fields %}
+  <option>{{field.field}}</option>
+  {% endfor %}
+</datalist></p>
 <p>UNI: <input type="text" name="uni"></p>
-<p>Year: <input type="text" name="year"></p>
+<p>Year: <select name="year">
+  <option>freshman</option>
+  <option>sophomore</option>
+  <option>junior</option>
+  <option>senior</option>
+</select></p>
 <p>Phone: <input type="text" name="phone"></p> 
 <input type="hidden" name="pid" value="{{pid}}">
 <input type="submit" value="Apply Now!">
