@@ -1,0 +1,22 @@
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+
+
+<body>
+  <h1>{{opp.name}} at {{company}}</h1>
+  <h3><span style="font-weight:bold;">Job type: </span>{{opp.job_type}}</h3>
+  <h3><span style="font-weight:bold;">Field: </span>{{opp.field}}</h3>
+  <p><span style="font-weight:bold;">Start time: </span>{{opp.start_time}}</h3>
+  <p><span style="font-weight:bold;">End time: </span>{{opp.end_time}}</h3>
+  <p>Until now, <span style="font-weight:bold;">{{stu_count}}</span> students have applied to this program.</p>
+  <p><a href="/apply/{{opp.pid}}">Apply Now</a></p>
+
+</body>
+
+
+</html>

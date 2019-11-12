@@ -25,7 +25,7 @@
     <p><span style="font-weight:bold">{{n.name}}</span>, {{n.position}} from {{n.company}} recruiting for:</p>
     <ul style="list-style-type:disc;">
       {% for prof_opp in n.prof_opps %}
-      <li><div>{{prof_opp['name']}}</div></li>
+      <li><a href="/prof-opp/{{prof_opp['pid']}}">{{prof_opp['name']}}</a></li>
       {% endfor %}
     </ul>
     {% endfor %}

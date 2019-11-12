@@ -23,29 +23,9 @@ tmpl_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 app = Flask(__name__, template_folder=tmpl_dir)
 
 
-#
-# The following is a dummy URI that does not connect to a valid database. You will need to modify it to connect to your Part 2 database in order to use the data.
-#
-# XXX: The URI should be in the format of: 
-#
-#     postgresql://USER:PASSWORD@104.196.18.7/w4111
-#
-# For example, if you had username biliris and password foobar, then the following line would be:
-#
-#     DATABASEURI = "postgresql://biliris:foobar@104.196.18.7/w4111"
-#
 DATABASEURI = "postgresql://yw3241:7276@34.74.165.156/proj1part2"
 
-
-#
-# This line creates a database engine that knows how to connect to the URI above.
-#
 engine = create_engine(DATABASEURI)
-
-#
-# Example of running queries in your database
-# Note that this will probably not work if you already have a table named 'test' in your database, containing meaningful data. This is only an example showing you how to run queries in your database using SQLAlchemy.
-#
 
 class Event:
   def __init__(self, eid, name, field, description):
@@ -94,6 +74,36 @@ def index():
   context = dict(events = events)
   return render_template("index.html", **context)
 
+@app.route('/apply/<pid>')
+def apply(pid):
+  name = next(g.conn.execute("select name from prof_opps where pid = " + pid + ";"))['name']
+  return render_template("apply.html", pid=pid, name=name)
+
+@app.route('/apply-add', methods=['POST'])
+def apply_add():
+  pid = request.form['pid']
+  name = request.form['name']
+  if (name == ''):
+    print("name is null") 
+    # TODO
+  field = request.form['field']
+  year = request.form['year'] 
+  uni = request.form['uni']
+  if (uni == ''): 
+    print("uni is null")
+    # TODO 
+  phone = request.form['phone']
+
+  # insert the student if not exist
+  g.conn.execute('INSERT INTO students(uni, name, phone, field, year) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\'' % (uni, name, phone, field, year) + \
+                    'where not exists ( select * from students where uni = \'%s\');' % (uni))
+
+  # insert into applies_to
+  # TODO: error checking
+  g.conn.execute('INSERT INTO applies_to(uni, pid, time) VALUES (\'%s\', %d, date_trunc(\'second\', now())::timestamp);' % (uni, int(pid)));
+  
+  return redirect('/')
+
 @app.route('/rsvp/<eid>')
 def rsvp(eid):
   name = g.conn.execute("select name from events where eid = \'" + eid + "\';")
@@ -103,7 +113,7 @@ def rsvp(eid):
 # Example of adding new data to the database
 @app.route('/rsvp-add', methods=['POST'])
 def rsvp_add():
-  
+
   print("rsvp-add page says hello; identity " + request.form['identity'] + " equals identity is " + str(request.form['identity'] == 'student'))
   print(request.form)
   eid = request.form['eid']
@@ -128,7 +138,7 @@ def rsvp_add():
 
     # insert into RSVP AFTER ERROR CHECKING
     # TODO: error checking
-    g.conn.execute('INSERT INTO rsvp_student(uni, eid, time) VALUES (\'%s\', \'%s\', date_trunc(\'second\', now())::timestamp);' % (uni, eid)) 
+    g.conn.execute('INSERT INTO rsvp_student(uni, eid, time) VALUES (\'%s\', %d, date_trunc(\'second\', now())::timestamp);' % (uni, int(eid))) 
 
   # when the person is a recruiter
   elif (request.form['identity'].strip() == 'recruiter'):
@@ -142,7 +152,7 @@ def rsvp_add():
     # insert into RSVP AFTER ERROR CHECKING
     # TODO: error checking
     rid = g.conn.execute('select rid from recruiters where name = \'%s\' and company = \'%s\';')['rid']
-    g.conn.execute('INSERT INTO rsvp_student(rid, eid, time) VALUES (%d, \'%s\', now()::timestamp);' % (rid, eid))           
+    g.conn.execute('INSERT INTO rsvp_student(rid, eid, time) VALUES (%d, %d, now()::timestamp);' % (int(rid), int(eid)))           
   
   else:
     print("identity is neither student nor recruiter")
@@ -173,11 +183,13 @@ def event(eid):
   
   return render_template("event.html", info=info, stu_count=len(students), rec_count=len(recruiters), students=students, recruiters=recruiters)
 
-@app.route('/login')
-def login():
-    abort(401)
-    this_is_never_executed()
+@app.route('/prof-opp/<pid>')
+def prof_opp(pid):
+  opp = next(g.conn.execute('select * from prof_opps where pid = \'' + pid + '\';'))
+  company = next(g.conn.execute('select r.company from recruiters r join prof_opps p on r.rid = p.rid where p.pid = \'' + pid + '\';'))['company']
+  stu_count = next(g.conn.execute('select count(*) as count from students s join applies_to a on s.uni = a.uni where a.pid = \'' + pid + '\';'))['count']
 
+  return render_template("prof_opp.html", opp=opp, company=company, stu_count=stu_count)
 
 if __name__ == "__main__":
   import click
