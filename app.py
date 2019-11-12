@@ -75,25 +75,25 @@ def index(time_constraint):
   context = dict(events = events, fields = fields)
   return render_template("index.html", **context)
 
-@app.route('/apply/<pid>')
-def apply(pid):
+@app.route('/apply/<pid>', defaults={"error":''})
+@app.route('/apply/<pid>/<error>')
+def apply(pid, error):
   name = next(g.conn.execute(text("select name from prof_opps where pid = :pid;"), pid=int(pid)))['name']
   fields = list(g.conn.execute("select distinct field from students;"))
-  return render_template("apply.html", fields=fields, pid=pid, name=name)
+  return render_template("apply.html", error=error, fields=fields, pid=pid, name=name)
 
 @app.route('/apply-add', methods=['POST'])
 def apply_add():
   pid = request.form['pid']
   name = request.form['name'] 
   if (name == ''):
-    print("name is null") 
-    # TODO
+    return redirect('/apply/%d/%s' % (int(pid), "name cannot be null!"))
+
   field = request.form['field'] 
   year = request.form['year']
   uni = request.form['uni']
   if (uni == ''): 
-    print("uni is null")
-    # TODO 
+    return redirect('/apply/%d/%s' % (int(pid), "uni cannot be null!"))
   phone = request.form['phone']
 
   # insert the student if not exist
