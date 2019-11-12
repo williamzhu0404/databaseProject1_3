@@ -24,7 +24,7 @@
 
     <h3>RSVPed recruiters (<span style="font-weight:bold;">{{rec_count}}</span> in total)</h3>
     {% for n in recruiters %}
-    <p><span style="font-weight:bold">{{n.name}}</span>, {{n.position}} from {{n.company}} recruiting for:</p>
+    <a href='/recruiter/{{n.rid}}'><p><span style="font-weight:bold">{{n.name}}</span></a>, {{n.position}} from {{n.company}} recruiting for:</p>
     <ul style="list-style-type:disc;">
       {% for prof_opp in n.prof_opps %}
       <li><a href="/prof-opp/{{prof_opp['pid']}}">{{prof_opp['name']}}</a></li>

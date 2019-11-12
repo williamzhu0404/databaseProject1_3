@@ -238,6 +238,36 @@ def create_event_add():
  
   return redirect('/')
 
+
+@app.route('/create-job/<rid>')
+def create_job(rid):
+  return render_template("create-job.html", rid=rid)
+
+@app.route('/create-job-add', methods=['POST'])
+def create_job_add():
+  
+  name = request.form['name']
+  if (name == ''):
+    return redirect("/error-message/job-without-name")
+    # TODO
+  start_time = request.form['start-time']
+  end_time = request.form['end-time']
+  field = request.form['field']
+  job_type= request.form['job-type']
+  rid = request.form['rid']
+
+  # insert event if does not exist
+  g.conn.execute('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', %s where not exists ( select * from prof_opps where name = \'%s\' and field = \'%s\' and rid = %s);' % (name, field, job_type, start_time, end_time, rid, name, field, rid))
+
+  return redirect('/recruiter/' + rid)
+
+
+@app.route('/recruiter/<rid>')
+def recruiter(rid):
+  rec = next(g.conn.execute('select * from recruiters where rid = ' + rid + ';'))
+  prof_opps = list(g.conn.execute('select * from prof_opps where rid = ' + rid + ';'))
+  return render_template("recruiter.html", rec=rec, prof_opps=prof_opps)
+
 #temporary coping with errors
 @app.route('/error-message/<msg>')
 def error_message(msg):

@@ -1,0 +1,25 @@
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+
+
+<body>
+  <h1>{{rec.name}}'s profile </h1>
+  <h3><span style="font-weight:bold;">Company: </span>{{rec.company}}</h3>
+  <h3><span style="font-weight:bold;">Field: </span>{{rec.field}}</h3>
+  <h3><span style="font-weight:bold;">Position: </span>{{rec.position}}</h3>
+  <p>Professional Opportunities Currently Recruiting for:</p><ul>
+    {% for prof_opp in prof_opps %}
+    <li><a href='/prof-opp/{{prof_opp.pid}}'>{{prof_opp.name}}: {{prof_opp.job_type}} at {{rec.company}}</a></li>
+    {% endfor %}
+  </ul>
+  <p><a href="/create-job/{{rec.rid}}">Post new positions</a></p>
+
+</body>
+
+
+</html>

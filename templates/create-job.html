@@ -1,0 +1,26 @@
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+
+
+<body>
+<h1>Create Your Job Posting!</h1>
+
+<form method="POST" action="/create-job-add">
+<p>Name: <input type="text" name="name"></p>
+<p>Job Type: <input type="text" name="job-type"></p>
+<p>Field: <input type="text" name="field"></p>
+<p>Start Time (YYYY-MM-DD HH:MM:SS): <input type="text" name="start-time"></p>
+<p>End Time (YYYY-MM-DD HH:MM:SS): <input type="text" name="end-time"></p> 
+<input type="hidden" value="{{rid}}" name="rid">
+<input type="submit" value="Create Now!">
+</form>
+
+</body>
+
+
+</html>
