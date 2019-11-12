@@ -12,7 +12,7 @@
   <div>
     {% for event in events %}
     <div>
-	<h3>{{event.name}}</h3>
+        <a href="event/{{event.eid}}"><h3>{{event.name}}</h3></a>
 	<p>{{event.field}}</p>
 	<p>{{event.description}}</p>
 	<a href="rsvp/{{event.eid}}">RSVP</a> 

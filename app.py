@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python1.7
 
 """
 Columbia's COMS W4111.001 Introduction to Databases
@@ -152,6 +152,26 @@ def rsvp_add():
   return redirect('/')
 
 
+@app.route('/event/<eid>')
+def event(eid):
+  info = next(g.conn.execute('select * from events where eid = \'' + eid + '\';'))
+  cursor = g.conn.execute('select s.uni, s.name, s.field, s.year from students s join rsvp_student r_s on s.uni = r_s.uni where r_s.eid = \'' + eid + '\';')
+  students = []
+  for student in cursor:
+    students.append(student)
+
+  cursor = g.conn.execute('select r.rid, r.name, r.field, r.company, r.position from recruiters r join rsvp_recruiter r_r on r.rid = r_r.rid where r_r.eid = \'' + eid + '\';')
+  recruiters = []
+  for recruiter in cursor:
+    prof_opps = []
+    cursor2 = g.conn.execute('select p.pid, p.name from prof_opps p where p.rid = ' + str(recruiter['rid']) + ';')
+    for prof_opp in cursor2:
+	prof_opps.append(prof_opp)
+    recruiter2 = dict(recruiter)
+    recruiter2['prof_opps'] = prof_opps
+    recruiters.append(recruiter2)
+  
+  return render_template("event.html", info=info, stu_count=len(students), rec_count=len(recruiters), students=students, recruiters=recruiters)
 
 @app.route('/login')
 def login():

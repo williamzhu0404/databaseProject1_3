@@ -1,0 +1,36 @@
+<html>
+  <style>
+    body{ 
+      font-size: 15pt;
+      font-family: arial;
+    }
+  </style>
+
+
+<body>
+  <form method="GET" action="/"><input type="submit" value="Back to Home Page"></form>
+  <h1>{{info.name}}</h1>
+  <h3>{{info.field}}</h3>
+  <h3>{{info.start_time}}</h3>
+  <h3>{{info.end_time}}</h3>
+  <p>{{info.description}}</p>
+  <div>
+    <h3>RSVPed students (<span style="font-weight:bold;">{{stu_count}}</span> in total)</h3>
+    {% for n in students %}
+    <p><span style="font-weight:bold">{{n.name}}</span>, {{n.year}} studying {{n.field}}</p>
+    {% endfor %}
+
+    <h3>RSVPed recruiters (<span style="font-weight:bold;">{{rec_count}}</span> in total)</h3>
+    {% for n in recruiters %}
+    <p><span style="font-weight:bold">{{n.name}}</span>, {{n.position}} from {{n.company}} recruiting for:</p>
+    <ul style="list-style-type:disc;">
+      {% for prof_opp in n.prof_opps %}
+      <li><div>{{prof_opp['name']}}</div></li>
+      {% endfor %}
+    </ul>
+    {% endfor %}
+
+</body>
+
+
+</html>
