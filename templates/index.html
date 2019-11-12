@@ -23,7 +23,7 @@
         <a href="event/{{event.eid}}"><h3>{{event.name}}</h3></a>
 	<p>Field: {{event.field}} - Start Time: {{event.start_time}}</p>
 	<p>{{event.description}}</p>
-	{% if event.outdated == "false" %}
+	{% if event.outdated == "False" %}
           <a href="rsvp/{{event.eid}}">RSVP</a>
         {% else %}
           <em>Event has expired</em>

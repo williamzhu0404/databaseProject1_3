@@ -66,7 +66,7 @@ def index(field):
   for result in cursor:
     if (not field or result['field'] == field):
       event = dict(result)
-      event['outdated'] = str(event['start_time'] > datetime.datetime.now())
+      event['outdated'] = str(event['start_time'] < datetime.datetime.now())
       events.append(event)
   cursor.close()
   
@@ -198,7 +198,12 @@ def prof_opp(pid):
 
 @app.route('/create-event')
 def create_event():
-  return render_template("create-event.html")
+  fields= list(g.conn.execute('select distinct field from students'))
+  organizations=list(g.conn.execute('select distinct name from organizations'))
+  venues=list(g.conn.execute('select distinct name from venues')) 
+  
+  context = dict(fields=fields, organizations=organizations, venues=venues)
+  return render_template("create-event.html", **context)
 
 @app.route('/create-event-add', methods=['POST'])
 def create_event_add():
@@ -213,8 +218,9 @@ def create_event_add():
   venue = request.form['venue']
   description = request.form['description']
   organization = request.form['organization']
+  print("the venue gotton is", venue)
   try:   
-  	vid = next(g.conn.execute('select vid from venues where name = \'' + venue + '\';'))['vid']
+  	vid = next(g.conn.execute("select vid from venues where name = '" + venue + "';"))['vid']
   	print("vid,", vid) 
   except:
 	print("the venue is wrong")
@@ -225,8 +231,8 @@ def create_event_add():
   g.conn.execute('INSERT INTO events(name, field, vid, description, start_time, end_time) select \'%s\', \'%s\', \'%s\', \'%s\', \'%s\', \'%s\' where not exists ( select * from events where name = \'%s\' and field = \'%s\');' % (name, field, vid, description, start_time, end_time, name, field))
   
   try:
-  	eid = next(g.conn.execute('select eid from events where name = \'' + name + '\' and field = \'' + field + '\';'))['eid']
-  	oid = next(g.conn.execute('select oid from organizations where name = \'' + organization + '\';'))['oid']
+  	eid = next(g.conn.execute("select eid from events where name = '" + name + "' and field = '" + field + "';"))['eid']
+  	oid = next(g.conn.execute("select oid from organizations where name = '" + organization + "';"))['oid']
   	print("eid and oid:", eid, oid)
   except:
 	print("the organization is wrong")
@@ -241,7 +247,9 @@ def create_event_add():
 
 @app.route('/create-job/<rid>')
 def create_job(rid):
-  return render_template("create-job.html", rid=rid)
+  jobtypes = list(g.conn.execute('select distinct job_type from prof_opps'))
+  fields= list(g.conn.execute('select distinct field from students'))
+  return render_template("create-job.html", rid=rid, jobtypes=jobtypes, fields=fields)
 
 @app.route('/create-job-add', methods=['POST'])
 def create_job_add():

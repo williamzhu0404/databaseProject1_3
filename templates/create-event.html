@@ -12,9 +12,24 @@
 
 <form method="POST" action="/create-event-add">
 <p>Name: <input type="text" name="name"></p>
-<p>Field: <input type="text" name="field"></p>
-<p>Organization: <input type="text" name="organization"></p>
-<p>Venue: <input type="text" name="venue"></p>
+<p>Field: <input type="text" list="fields"  name="field">
+  <datalist id="fields">
+    {% for field in fields %}
+    <option>{{field.field}}</option>
+    {% endfor %}
+  </datalist></p>
+<p>Organization: 
+  <select name="organization">
+    {% for organization in organizations %}
+    <option>{{organization.name}}</option>
+    {% endfor %}
+  </select></p>
+<p>Venue: 
+  <select name="venue">
+    {% for venue in venues %}
+    <option>{{venue.name}}</option>
+    {% endfor %}
+  </select></p>
 <p>Description: <input type="text" name="description"></p>
 <p>Start Time (YYYY-MM-DD HH:MM:SS): <input type="text" name="start-time"></p>
 <p>End Time (YYYY-MM-DD HH:MM:SS): <input type="text" name="end-time"></p> 

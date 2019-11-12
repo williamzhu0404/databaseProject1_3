@@ -12,8 +12,19 @@
 
 <form method="POST" action="/create-job-add">
 <p>Name: <input type="text" name="name"></p>
-<p>Job Type: <input type="text" name="job-type"></p>
-<p>Field: <input type="text" name="field"></p>
+<p>Job Type: 
+  <input type="text" list="jobtypes", name="job-type">
+  <datalist id = "jobtypes">
+    {% for jobtype in jobtypes %}
+    <option value="{{jobtype.job_type}}">{{jobtype.job_type}}</option>
+    {% endfor %}
+  </datalist></p>
+<p>Field: <input type="text" list="fields"  name="field">
+  <datalist id="fields">
+    {% for field in fields %}
+    <option value="{{field.field}}">{{field.field}}</option>
+    {% endfor %}
+  </datalist></p>
 <p>Start Time (YYYY-MM-DD HH:MM:SS): <input type="text" name="start-time"></p>
 <p>End Time (YYYY-MM-DD HH:MM:SS): <input type="text" name="end-time"></p> 
 <input type="hidden" value="{{rid}}" name="rid">
