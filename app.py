@@ -103,14 +103,17 @@ def apply_add():
   phone = request.form['phone']
 
   # insert the student if not exist
-  s = text("INSERT INTO students(uni, name, phone, field, year) select :uni, :name, :phone, :field, :year where not exists ( select * from students where uni = :uni);") 
-  g.conn.execute(s, uni=uni, name=name, phone=phone, field=field, year=year)
+  try:
+    s = text("INSERT INTO students(uni, name, phone, field, year) select :uni, :name, :phone, :field, :year where not exists ( select * from students where uni = :uni);") 
+    g.conn.execute(s, uni=uni, name=name, phone=phone, field=field, year=year)
 
-  # insert into applies_to
-  # TODO: error checking
-  g.conn.execute(text('INSERT INTO applies_to(uni, pid, time) VALUES (:uni, :pid, date_trunc(\'second\', now())::timestamp);'), uni=uni, pid=int(pid))
-  return redirect('/')
-
+    #  insert into applies_to
+    # TODO: error checking
+    g.conn.execute(text('INSERT INTO applies_to(uni, pid, time) VALUES (:uni, :pid, date_trunc(\'second\', now())::timestamp);'), uni=uni, pid=int(pid))
+    return redirect('/')
+  except exc.SQLAlchemyError as err:
+      return redirect('/apply/%d/%s' % (int(pid), "database exception: %s" % str(err).split('\n')[1]))
+    
 @app.route('/rsvp/<eid>/', defaults={"error":''})
 @app.route('/rsvp/<eid>/<error>')
 def rsvp(eid, error):
@@ -144,7 +147,7 @@ def rsvp_add():
       g.conn.execute(text('INSERT INTO rsvp_student(uni, eid, time) VALUES (:uni, :eid, date_trunc(\'second\', now())::timestamp);'), uni=uni, eid=int(eid)) 
 
     except exc.SQLAlchemyError as err:
-      return redirect('/rsvp/%d/%s' % (int(eid), "database exception; please be mindful of the input lengths"))
+      return redirect('/rsvp/%d/%s' % (int(eid), "database exception: %s" % str(err).split('\n')[1]))
 
   # when the person is a recruiter
   elif (request.form['identity'].strip() == 'recruiter'):
@@ -160,7 +163,7 @@ def rsvp_add():
       g.conn.execute(text('INSERT INTO rsvp_recruiter(rid, eid, time) VALUES (:rid, :eid, now()::timestamp);'), rid=int(rid), eid=int(eid))       
 
     except exc.SQLAlchemyError as err:
-      return redirect('/rsvp/%d/%s' % (int(eid), "database exception; please be mindful of the input lengths"))
+      return redirect('/rsvp/%d/%s' % (int(eid), "database exception; %s" % str(err).split('\n')[1]))
   
   else:
     return redirect('/rsvp/%d/%s' % (int(eid), "Please choose either of the two identities!"))
@@ -240,7 +243,7 @@ def create_event_add():
     g.conn.execute(text('INSERT INTO events(name, field, vid, description, start_time, end_time) select :name, :field, :vid, :description, :start_time, :end_time where not exists ( select * from events where name = :name and field = :field );'), name=name, field=field, vid=vid, description=description, start_time=start_time, end_time=end_time)
 
   except exc.SQLAlchemyError as err:
-    return redirect('/create-event/%s' % ("database exception; please be mindful of the input lengths"))
+    return redirect('/create-event/%s' % ("database exception: %s" % str(err).split('\n')[1]))
 
   try:
   	eid = g.conn.execute(text("select eid from events where name = :name and field = :field;"), name=name, field=field).fetchone()['eid']
@@ -253,7 +256,7 @@ def create_event_add():
   try: 
     g.conn.execute(text('insert into hosts(oid, eid) values (:oid, :eid);'), oid=oid, eid=int(eid)) 
   except exc.SQLAlchemyError as err:
-    return redirect('/create-event/%s' % ("database exception; please be mindful of the input lengths"))
+    return redirect('/create-event/%s' % ("database exception: %s" % str(err).split('\n')[1]))
  
   return redirect('/')
 
@@ -285,7 +288,7 @@ def create_job_add():
     g.conn.execute(text('INSERT INTO prof_opps(name, field, job_type, start_time, end_time, rid) select :name, :field, :job_type, :start_time, :end_time, :rid where not exists ( select * from prof_opps where name = :name and field = :field and rid = :rid);'), name=name, field=field, job_type=job_type, start_time=start_time, end_time=end_time, rid=int(rid))
 
   except exc.SQLAlchemyError as err:
-    return redirect('/create-job/%d/%s' % (int(rid), "database exception; please be mindful of the input lengths"))
+    return redirect('/create-job/%d/%s' % (int(rid), "database exception: %s" % str(err).split('\n')[1]))
 
   return redirect('/recruiter/' + rid)
 
